@@ -87,3 +87,62 @@ $ ktl exec nginx -- curl --no-progress-meter http://$podIP:9080/details/1 | jq "
   "ISBN-13": "123-1234567890"
 }
 ```
+
+# Application as a deployments (instead of pods)
+
+## Remove pod
+
+```shell
+ktl delete pod details
+```
+
+## Deploy application as deployment with multiple replicas
+
+```shell
+$ ktl apply -f resources/details_deployment.yaml
+$ ktl get pods
+NAME                       READY   STATUS    RESTARTS   AGE
+details-7d8cc45485-26sz5   1/1     Running   0          14m
+details-7d8cc45485-sdhpr   1/1     Running   0          4m54s
+nginx                      1/1     Running   0          79m
+```
+
+# Switching kubectl context and namespaces
+
+## List all contexts
+
+```shell
+ktl config get-contexts
+```
+or list just context names
+
+```shell
+ktl config get-contexts -o name
+```
+
+## Switch context
+
+```shell
+ktl config use-context kind-kind18
+```
+`kind-kind18` will become the current context.  
+
+## List all namespaces
+
+```shell
+ktl get namespaces
+```
+
+## Switch current kubectl context namespace
+
+```shell
+ktl config set-context --current --namespace=kube-system
+```
+`kube-system` will become current namespace for current context. 
+
+```shell
+ktl get pods
+```
+Will provide pods running in current selected namespace for current context.
+
+TIP: It is recommended to install [kubectx](https://github.com/ahmetb/kubectx) to make it easy to switch between contexts and namespaces.  

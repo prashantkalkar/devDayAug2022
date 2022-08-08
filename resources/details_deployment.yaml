@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: details
+  labels:
+    app: details
+spec:
+  replicas: 2
+  template:
+    metadata:
+      name: details
+      labels:
+        app: details
+    spec:
+      containers:
+        - name: details
+          image: docker.io/istio/examples-bookinfo-details-v1:1.16.4
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9080
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: details
