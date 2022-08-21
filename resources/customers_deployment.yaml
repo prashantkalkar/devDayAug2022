@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customers
+  labels:
+    app: customers
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: customers
+  template:
+    metadata:
+      name: customers
+      labels:
+        app: customers
+    spec:
+      containers:
+        - name: customers
+          image: amitsadafule/customer-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080

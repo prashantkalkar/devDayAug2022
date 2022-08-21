@@ -39,25 +39,64 @@ ktl get pods
 
 # Example Application details
 
-Slides [here](TBA)
+Refer Slides [here](TBA)
 
 # Pod Application access 
 
-## Install detailed Service
+## Install customer Service
 
 ```shell
-ktl apply -f resources/details_pod.yaml
-ktl get pods -w
+ktl apply -f resources/customer_pod.yaml
+watch -n 5 "kubectl get pods"
 ```
 Wait till pod is running
 
 ```shell
 $ ktl get pods
-NAME      READY   STATUS    RESTARTS   AGE
-details   1/1     Running   0          50m
+NAME        READY   STATUS    RESTARTS   AGE
+customers   1/1     Running   0          7m15s
 ```
 
-## Install supporting pod to access the pod
+## How do I access the pod?
+
+#### Access using pod SSH
+
+```shell
+$ ktl exec customers -- curl http://localhost:8080
+{
+  "id": "CUST_0001",
+  "name": "Customer Name",
+  "phoneNumber": "+911233243335",
+  "gender": "M"
+}
+```
+
+(Install curl if not available. The image linux is debian i.e. `apt-get update && apt-get -y install curl` should work)
+
+### what do we need to access network application?
+
+Refer Slides [here](TBA)
+
+#### Pod IP 
+
+```shell
+$ ktl get pods -o wide
+NAME        READY   STATUS    RESTARTS   AGE   IP           NODE                   NOMINATED NODE   READINESS GATES
+customers   1/1     Running   0          46m   10.244.0.8   kind18-control-plane   <none>           <none>
+```
+
+#### Pod Port
+
+```shell
+$ ktl get pods customers -o yaml
+  ...
+    ports:
+    - containerPort: 8080
+      protocol: TCP
+  ...
+```
+
+### Install supporting pod to access the pod
 
 Run a supporting container to access the application. 
 
@@ -65,26 +104,21 @@ Run a supporting container to access the application.
 $ ktl run nginx --image=nginx
 $ ktl get pods -w
 $ ktl get pods
-NAME      READY   STATUS    RESTARTS   AGE
-details   1/1     Running   0          50m
-nginx     1/1     Running   0          24m
+NAME        READY   STATUS    RESTARTS   AGE
+customers   1/1     Running   0          73m
+nginx       1/1     Running   0          26s
 ```
 
 ## Access the pod with the pod IP
 
 ```shell
-$ podIP=$(ktl get pods details -o json | jq -r ".status.podIP")
-$ ktl exec nginx -- curl --no-progress-meter http://$podIP:9080/details/1 | jq "."
+$ podIP=10.244.0.8
+$ ktl exec nginx -- curl --no-progress-meter http://$podIP:8080/customers/1 | jq "."
 {
-  "id": 1,
-  "author": "William Shakespeare",
-  "year": 1595,
-  "type": "paperback",
-  "pages": 200,
-  "publisher": "PublisherA",
-  "language": "English",
-  "ISBN-10": "1234567890",
-  "ISBN-13": "123-1234567890"
+  "id": "CUST_0001",
+  "name": "Customer Name",
+  "phoneNumber": "+911233243335",
+  "gender": "M"
 }
 ```
 
@@ -99,17 +133,40 @@ ktl delete pod details
 ## Deploy application as deployment with multiple replicas
 
 ```shell
-$ ktl apply -f resources/details_deployment.yaml
+$ ktl apply -f resources/customers_deployment.yaml
 $ ktl get pods
-NAME                       READY   STATUS    RESTARTS   AGE
-details-7d8cc45485-26sz5   1/1     Running   0          14m
-details-7d8cc45485-sdhpr   1/1     Running   0          4m54s
-nginx                      1/1     Running   0          79m
+NAME                         READY   STATUS    RESTARTS   AGE
+customers-568c95b849-7jhh5   1/1     Running   0          8s
+customers-568c95b849-x2q54   1/1     Running   0          8s
+nginx                        1/1     Running   0          18h
 ```
 
-# Switching kubectl context and namespaces
+## Accessing application deployed as deployment
 
-## List all contexts
+Get pod ips for deployment pods
+
+```shell
+$ ktl get pods -o wide
+NAME                         READY   STATUS    RESTARTS   AGE   IP            NODE                   NOMINATED NODE   READINESS GATES
+customers-568c95b849-7jhh5   1/1     Running   0          45s   10.244.0.10   kind18-control-plane   <none>           <none>
+customers-568c95b849-x2q54   1/1     Running   0          45s   10.244.0.11   kind18-control-plane   <none>           <none>
+nginx                        1/1     Running   0          18h   10.244.0.9    kind18-control-plane   <none>           <none>
+```
+
+Access application with any's ip address
+
+```shell
+ktl exec nginx -- curl --no-progress-meter http://10.244.0.14:9080/details/1
+```
+But accessing application with individual pod ip defeats the whole purpose of using deployment. 
+Pods are ephemeral and can change IPs or scale out or scale in any time. 
+
+---
+
+# Additional sections
+## Switching kubectl context and namespaces
+
+### List all contexts
 
 ```shell
 ktl config get-contexts
@@ -120,20 +177,20 @@ or list just context names
 ktl config get-contexts -o name
 ```
 
-## Switch context
+### Switch context
 
 ```shell
 ktl config use-context kind-kind18
 ```
 `kind-kind18` will become the current context.  
 
-## List all namespaces
+### List all namespaces
 
 ```shell
 ktl get namespaces
 ```
 
-## Switch current kubectl context namespace
+### Switch current kubectl context namespace
 
 ```shell
 ktl config set-context --current --namespace=kube-system
@@ -145,4 +202,6 @@ ktl get pods
 ```
 Will provide pods running in current selected namespace for current context.
 
-TIP: It is recommended to install [kubectx](https://github.com/ahmetb/kubectx) to make it easy to switch between contexts and namespaces.  
+TIP: 
+It is recommended to install [kubectx](https://github.com/ahmetb/kubectx) to make it easy to switch between contexts and namespaces.
+Also install [kube-ps1](https://github.com/jonmosco/kube-ps1) to add context and namespace information to commandline. 
