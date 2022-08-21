@@ -39,7 +39,8 @@ ktl get pods
 
 ## Setup Kops cluster on AWS
 
-Setup and configure AWS CLI and use correct profile for your AWS account (this setup might incur cost. Please evaluate first)
+Setup and configure AWS CLI and use correct profile for your AWS account 
+NOTE: This setup might incur cost. Please evaluate first. The kops setup that is created is following HA setup.
 
 #### Ensure your AWS user has following permissions
 
@@ -72,14 +73,58 @@ terraform apply tfplan
 #### Create bucket for KOPS state
 
 ```shell
-export KOPS_STATE_STORE=devday-2022-kops-cluster-state
+export KOPS_STATE_BUCKET=devday-2022-kops-cluster-state
 ```
 
 ```shell
 cd kops-state-bucket
 terraform init -backend-config="bucket=$TF_S3_BUCKET_NAME" -backend-config=../backend.hcl
-terraform plan -out tfplan -var="kops_state_bucket_name=$KOPS_STATE_STORE" -var="created_by_tag=prashantk"
+terraform plan -out tfplan -var="kops_state_bucket_name=$KOPS_STATE_BUCKET" -var="created_by_tag=prashantk"
 terraform apply tfplan
+```
+
+#### Create kops cluster
+
+Install kops binary as kops_1.18.2 (version 1.18.2)
+Create a public-private key pair (if not already created)
+This key can be used to ssh into the instances.
+
+NOTE: Make sure the cluster name ends with .k8s.local to use gossip based setup.
+
+```shell
+cd kops_cluster_tf
+export CLUSTER_NAME=devday2022.cluster.k8s.local
+export KOPS_STATE_STORE=s3://devday-2022-kops-cluster-state
+kops_1.18.2 create cluster \
+    --name ${CLUSTER_NAME} \
+    --cloud=aws \
+    --node-count 2 \
+    --zones ap-south-1a,ap-south-1b,ap-south-1c \
+    --master-zones ap-south-1a,ap-south-1b,ap-south-1c \
+    --topology private \
+    --networking calico \
+    --ssh-public-key=~/.ssh/id_rsa.pub \
+    --bastion="true" \
+    --cloud-labels="created_by=prashantk,usage=k8sDevDayTalk2022" \
+    --yes
+```
+
+Note: For production cluster, further improvements has to be done e.g. Restricting k8s API to specific CIDR or created internal ELB etc.
+
+#### Validate cluster and access the cluster
+
+Validate the cluster state
+
+```shell
+kops_1.18.2 validate cluster --name $CLUSTER_NAME --wait 10m
+```
+
+#### Destroy cluster
+
+The cluster can be destroyed as follows. Do it at the end of the session to ensure cost is not accumated for unused clusters. 
+
+```shell
+kops_1.18.2 delete cluster --name $CLUSTER_NAME --yes
 ```
 
 # Example Application details
