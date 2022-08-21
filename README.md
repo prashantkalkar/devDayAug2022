@@ -37,6 +37,51 @@ kind create cluster --image kindest/node:v1.18.20 --name kind18  --wait 5m
 ktl get pods 
 ```
 
+## Setup Kops cluster on AWS
+
+Setup and configure AWS CLI and use correct profile for your AWS account (this setup might incur cost. Please evaluate first)
+
+#### Ensure your AWS user has following permissions
+
+(Follow Kops documentation [here](https://kops.sigs.k8s.io/getting_started/aws/))
+
+- AmazonEC2FullAccess
+- AmazonRoute53FullAccess
+- AmazonS3FullAccess
+- IAMFullAccess
+- AmazonVPCFullAccess
+- AmazonSQSFullAccess
+- AmazonEventBridgeFullAccess
+
+#### Create Terraform s3 state bucket
+
+Note: Make sure to update the bucket name. It has to be globally unique
+Also, created by tag is added to identify which user created the resources. This is useful in case of shared AWS account (Company account) 
+
+```shell
+export TF_S3_BUCKET_NAME=k8s-devday-2022-tfstate-bucket
+```
+
+```shell
+cd tf-s3-state-bucket
+terraform init
+terraform plan -out tfplan -var="tf_s3_bucket_name=$TF_S3_BUCKET_NAME" -var="created_by_tag=prashantk"
+terraform apply tfplan
+```
+
+#### Create bucket for KOPS state
+
+```shell
+export KOPS_STATE_STORE=devday-2022-kops-cluster-state
+```
+
+```shell
+cd kops-state-bucket
+terraform init -backend-config="bucket=$TF_S3_BUCKET_NAME" -backend-config=../backend.hcl
+terraform plan -out tfplan -var="kops_state_bucket_name=$KOPS_STATE_STORE" -var="created_by_tag=prashantk"
+terraform apply tfplan
+```
+
 # Example Application details
 
 Refer Slides [here](TBA)
