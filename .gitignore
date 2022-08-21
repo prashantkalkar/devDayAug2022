@@ -135,3 +135,7 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+.idea
+kops_cluster_tf
+.terraform.lock.hcl
+tfplan
