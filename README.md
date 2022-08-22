@@ -19,28 +19,10 @@ mv kubectl /usr/local/bin/kubectl
 
 Create an alias `ktl` for `kubectl`
 
-## Install Kind
-
-Install kind as shown [here](https://kind.sigs.k8s.io/docs/user/quick-start/#installation).
-
-### For MacOS
-```shell
-brew install kind
-```
-
-## Create a kind cluster
-
-Create a kind cluster (v1.18.x)
-
-```shell
-kind create cluster --image kindest/node:v1.18.20 --name kind18  --wait 5m
-ktl get pods 
-```
-
 ## Setup Kops cluster on AWS
 
 Setup and configure AWS CLI and use correct profile for your AWS account 
-NOTE: This setup might incur cost. Please evaluate first. The kops setup that is created is following HA setup.
+**NOTE:** **This setup might incur cost**. Please evaluate first. The kops setup that is created is following **HA setup**.
 
 #### Ensure your AWS user has following permissions
 
@@ -56,7 +38,7 @@ NOTE: This setup might incur cost. Please evaluate first. The kops setup that is
 
 #### Create Terraform s3 state bucket
 
-Note: Make sure to update the bucket name. It has to be globally unique
+**Note:** Make sure to update the bucket name. It has to be globally unique
 Also, created by tag is added to identify which user created the resources. This is useful in case of shared AWS account (Company account) 
 
 ```shell
@@ -85,11 +67,11 @@ terraform apply tfplan
 
 #### Create kops cluster
 
-Install kops binary as kops_1.18.2 (version 1.18.2)
+Install kops binary as **kops_1.18.2** (version 1.18.2)
 Create a public-private key pair (if not already created)
 This key can be used to ssh into the instances.
 
-NOTE: Make sure the cluster name ends with .k8s.local to use gossip based setup.
+**NOTE:** Make sure the cluster name ends with .k8s.local to use gossip based setup.
 
 ```shell
 cd kops_cluster_tf
@@ -119,13 +101,29 @@ Validate the cluster state
 kops_1.18.2 validate cluster --name $CLUSTER_NAME --wait 10m
 ```
 
+Validate kubectl access
+
+```shell
+ktl get nodes
+NAME                                            STATUS   ROLES    AGE   VERSION
+ip-172-20-105-15.ap-south-1.compute.internal    Ready    master   20m   v1.18.20
+ip-172-20-112-185.ap-south-1.compute.internal   Ready    node     18m   v1.18.20
+ip-172-20-45-107.ap-south-1.compute.internal    Ready    master   19m   v1.18.20
+ip-172-20-50-30.ap-south-1.compute.internal     Ready    node     18m   v1.18.20
+ip-172-20-86-189.ap-south-1.compute.internal    Ready    master   19m   v1.18.20
+```
+
 #### Destroy cluster
 
-The cluster can be destroyed as follows. Do it at the end of the session to ensure cost is not accumated for unused clusters. 
+The cluster can be destroyed as follows. Do it **at the end of the session** to ensure **cost is not accumulated** for unused clusters. 
 
 ```shell
 kops_1.18.2 delete cluster --name $CLUSTER_NAME --yes
 ```
+
+Delete the state buckets created using terraform as well (`terraform plan -out tfplan -destroy && terraform apply tfplan`)
+
+---
 
 # Example Application details
 
@@ -152,7 +150,7 @@ customers   1/1     Running   0          7m15s
 #### Access using pod SSH
 
 ```shell
-$ ktl exec customers -- curl http://localhost:8080
+$ ktl exec customers -- curl -s -S http://localhost:8080/customers/1
 {
   "id": "CUST_0001",
   "name": "Customer Name",
@@ -171,8 +169,8 @@ Refer Slides [here](TBA)
 
 ```shell
 $ ktl get pods -o wide
-NAME        READY   STATUS    RESTARTS   AGE   IP           NODE                   NOMINATED NODE   READINESS GATES
-customers   1/1     Running   0          46m   10.244.0.8   kind18-control-plane   <none>           <none>
+NAME        READY   STATUS    RESTARTS   AGE     IP                NODE                                            NOMINATED NODE   READINESS GATES
+customers   1/1     Running   0          3m31s   100.105.198.130   ip-172-20-112-185.ap-south-1.compute.internal   <none>           <none>
 ```
 
 #### Pod Port
@@ -195,14 +193,14 @@ $ ktl run nginx --image=nginx
 $ ktl get pods -w
 $ ktl get pods
 NAME        READY   STATUS    RESTARTS   AGE
-customers   1/1     Running   0          73m
-nginx       1/1     Running   0          26s
+customers   1/1     Running   0          5m33s
+nginx       1/1     Running   0          28s
 ```
 
 ## Access the pod with the pod IP
 
 ```shell
-$ podIP=10.244.0.8
+$ podIP=100.105.198.130
 $ ktl exec nginx -- curl --no-progress-meter http://$podIP:8080/customers/1 | jq "."
 {
   "id": "CUST_0001",
@@ -212,12 +210,16 @@ $ ktl exec nginx -- curl --no-progress-meter http://$podIP:8080/customers/1 | jq
 }
 ```
 
-# Application as a deployments (instead of pods)
+## But I deploy multiple pods per service
+
+Refer Slides [here](TBA)
+
+# Application as a deployment (instead of pods)
 
 ## Remove pod
 
 ```shell
-ktl delete pod details
+ktl delete pod customers
 ```
 
 ## Deploy application as deployment with multiple replicas
@@ -237,16 +239,17 @@ Get pod ips for deployment pods
 
 ```shell
 $ ktl get pods -o wide
-NAME                         READY   STATUS    RESTARTS   AGE   IP            NODE                   NOMINATED NODE   READINESS GATES
-customers-568c95b849-7jhh5   1/1     Running   0          45s   10.244.0.10   kind18-control-plane   <none>           <none>
-customers-568c95b849-x2q54   1/1     Running   0          45s   10.244.0.11   kind18-control-plane   <none>           <none>
-nginx                        1/1     Running   0          18h   10.244.0.9    kind18-control-plane   <none>           <none>
+NAME                         READY   STATUS    RESTARTS   AGE     IP                NODE                                            NOMINATED NODE   READINESS GATES
+customers-568c95b849-7rj67   1/1     Running   0          31s     100.112.44.132    ip-172-20-50-30.ap-south-1.compute.internal     <none>           <none>
+customers-568c95b849-x5jqj   1/1     Running   0          31s     100.105.198.131   ip-172-20-112-185.ap-south-1.compute.internal   <none>           <none>
+nginx                        1/1     Running   0          4m48s   100.112.44.131    ip-172-20-50-30.ap-south-1.compute.internal     <none>           <none>
 ```
 
 Access application with any's ip address
 
 ```shell
-ktl exec nginx -- curl --no-progress-meter http://10.244.0.14:9080/details/1
+podIP=100.112.44.132
+ktl exec nginx -- curl --no-progress-meter http://$podIP:8080/customers/1 | jq "."
 ```
 But accessing application with individual pod ip defeats the whole purpose of using deployment. 
 Pods are ephemeral and can change IPs or scale out or scale in any time. 
