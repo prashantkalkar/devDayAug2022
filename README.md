@@ -357,6 +357,22 @@ curl -s -S http://$k8sNodeIP:30001/customers/1 | jq "."
 ```
 ### Can't really use single nodeIP
 
+Refer Slides [here](#slides)
+
+### Load balancer Service
+
+Instead of just using NodePort use load balancer service if provided by the cloud provider
+Create LB type service
+
+```shell
+ktl apply -f resources/customers_loadbalancer_service.yaml
+```
+
+#### Use dynamic Node Port
+
+```shell
+ktl apply -f resources/customers_loadbalancer_dynamicport.yaml
+```
 
 ---
 
