@@ -141,7 +141,7 @@ Delete the state buckets created using terraform as well (`terraform plan -out t
 
 # Example Application details
 
-Refer Slides [here](TBA)
+Refer Slides [here](#slides)
 
 # Pod Application access 
 
@@ -177,7 +177,7 @@ $ ktl exec customers -- curl -s -S http://localhost:8080/customers/1
 
 ### what do we need to access network application?
 
-Refer Slides [here](TBA)
+Refer Slides [here](#slides)
 
 #### Pod IP 
 
@@ -226,7 +226,7 @@ $ ktl exec nginx -- curl --no-progress-meter http://$podIP:8080/customers/1 | jq
 
 ## But I deploy multiple pods per service
 
-Refer Slides [here](TBA)
+Refer Slides [here](#slides)
 
 # Application as a deployment (instead of pods)
 
@@ -355,6 +355,14 @@ Now the Port 30001 is mapped to the container pod on the k8s node and should be 
 k8sNodeIP=172.20.112.185
 curl -s -S http://$k8sNodeIP:30001/customers/1 | jq "."
 ```
+### Can't really use single nodeIP
+
+
+---
+
+# Slides
+
+Refer Slides [here](TBA)
 
 ---
 
