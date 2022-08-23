@@ -113,6 +113,20 @@ ip-172-20-50-30.ap-south-1.compute.internal     Ready    node     18m   v1.18.20
 ip-172-20-86-189.ap-south-1.compute.internal    Ready    master   19m   v1.18.20
 ```
 
+#### Allow access to port range from bastion to nodes
+
+Create additional security groups to allow access to k8s nodes from bastion node on port ranged used by k8s for NodePort
+service.
+
+Copy the node and bastion security group ids from AWS Console (Most likely named as `nodes.devday2022.cluster.k8s.local` and `bastion.devday2022.cluster.k8s.local`)
+
+```shell
+cd kops-k8s-node-bastion-access
+terraform init -backend-config="bucket=$TF_S3_BUCKET_NAME" -backend-config=../backend.hcl
+terraform plan -out tfplan -var="created_by_tag=prashantk" -var="node_security_group_id=sg-07fdc39cbc5ce763e" -var="bastion_security_group_id=sg-01c0dac4f86bb63ff"
+terraform apply tfplan
+```
+
 #### Destroy cluster
 
 The cluster can be destroyed as follows. Do it **at the end of the session** to ensure **cost is not accumulated** for unused clusters. 
@@ -272,10 +286,75 @@ Access customer service with stable IP and port
 serviceIP=100.64.222.177
 ktl exec nginx -- curl --no-progress-meter http://$serviceIP:8080/customers/1 | jq "."
 ```
+### Service Endpoints
 
-### Well known port
+An endpoint resource is created for every clusterIP service. 
+ 
+```shell
+$ ktl get endpoints
+```
+Endpoint resource reflect the changes in the pod ips supported by the service.
+Delete a pod and see the changes are reflected or not.
 
+```shell
+$ ktl delete pod customers-568c95b849-4spdd
+$ ktl describe endpoints customers
+```
 
+### Service DNS & Well known port
+
+```shell
+$ ktl apply -f resources/customers_clusterip_WellknownPort.yaml
+$ ktl get services
+NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
+customers    ClusterIP   100.64.222.177   <none>        80/TCP    68m
+```
+
+Try accessing the application without the port (default http port 80 will be used)
+
+```shell
+$ serviceIP=100.64.222.177
+$ ktl exec nginx -- curl --no-progress-meter http://$serviceIP/customers/1 | jq "."
+```
+
+### What about Domain Name 
+
+Services are resolvable with service name inside k8s cluster.
+That means this should work.
+
+```shell
+ktl exec nginx -- curl --no-progress-meter http://customers/customers/1 | jq "."
+```
+
+### How does DNS works in this case?
+
+To add later.
+
+### But how do I access the service from outside? 
+
+How will we run the customer service using docker locally.
+
+```shell
+docker run -p 18080:8080 amitsadafule/customer-service:1.0.0
+```
+
+Access the application using link: [http://localhost:18080/customers/1](http://localhost:18080/customers/1)
+
+Here we are doing a port mapping. Host port 18080 is mapped to port 8080 on the container.
+
+Similarly, can be map container port to the k8s node port? 
+
+### NotePort Service
+
+```shell
+ktl apply -f resources/customers_nodeport_service.yaml
+```
+Now the Port 30001 is mapped to the container pod on the k8s node and should be accessible as follows:
+
+```shell
+k8sNodeIP=172.20.112.185
+curl -s -S http://$k8sNodeIP:30001/customers/1 | jq "."
+```
 
 ---
 
@@ -320,4 +399,31 @@ Will provide pods running in current selected namespace for current context.
 
 TIP: 
 It is recommended to install [kubectx](https://github.com/ahmetb/kubectx) to make it easy to switch between contexts and namespaces.
-Also install [kube-ps1](https://github.com/jonmosco/kube-ps1) to add context and namespace information to commandline. 
+Also install [kube-ps1](https://github.com/jonmosco/kube-ps1) to add context and namespace information to commandline.
+
+### Kops Bastion access
+
+(Steps taken from kops documentation here: https://kops.sigs.k8s.io/bastion/)
+
+Get the kops dns name for the bastion host
+
+```shell
+kops_1.18.2 toolbox dump -ojson | grep 'bastion.*elb.amazonaws.com'
+```
+Copy the DNSName. 
+
+Add key to ssh agent (this is same key we used while cluster creation)
+
+```shell
+$ ssh-add ~/.ssh/id_rsa
+```
+Verify if key is added 
+```shell
+$ ssh-add -L
+```
+
+SSH into bastion node
+```shell
+ssh -A ubuntu@<bastion_elb_a_record>
+ssh ubuntu@<master_ip>
+```
