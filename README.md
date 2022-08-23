@@ -254,6 +254,29 @@ ktl exec nginx -- curl --no-progress-meter http://$podIP:8080/customers/1 | jq "
 But accessing application with individual pod ip defeats the whole purpose of using deployment. 
 Pods are ephemeral and can change IPs or scale out or scale in any time. 
 
+## Adding a clusterIP service to access application with stable IP
+
+Create service 
+
+```shell
+$ ktl apply -f resources/customers_clusterip_service.yaml
+$ ktl get services
+NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+customers    ClusterIP   100.64.222.177   <none>        8080/TCP   22s
+kubernetes   ClusterIP   100.64.0.1       <none>        443/TCP    47h
+```
+
+Access customer service with stable IP and port
+
+```shell
+serviceIP=100.64.222.177
+ktl exec nginx -- curl --no-progress-meter http://$serviceIP:8080/customers/1 | jq "."
+```
+
+### Well known port
+
+
+
 ---
 
 # Additional sections
