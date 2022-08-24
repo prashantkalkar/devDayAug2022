@@ -127,6 +127,15 @@ terraform plan -out tfplan -var="created_by_tag=prashantk" -var="node_security_g
 terraform apply tfplan
 ```
 
+#### Deploy nginx ingress controller
+
+Install the ingress controller with following command. (Install helm if required)
+
+```shell
+helm upgrade --install ingress-nginx ingress-nginx --repo https://kubernetes.github.io/ingress-nginx --namespace ingress-nginx \
+  --create-namespace --version='<4'
+```
+
 #### Destroy cluster
 
 The cluster can be destroyed as follows. Do it **at the end of the session** to ensure **cost is not accumulated** for unused clusters. 
@@ -372,6 +381,127 @@ ktl apply -f resources/customers_loadbalancer_service.yaml
 
 ```shell
 ktl apply -f resources/customers_loadbalancer_dynamicport.yaml
+```
+
+### Install products service
+
+```shell
+ktl apply -f resources/products_deployment.yaml
+```
+
+Add service resource for the products service
+
+```shell
+ktl apply -f resources/products_clusterip_WellknownPort.yaml
+```
+
+Check products service connectivity
+
+```shell
+ktl exec nginx -- curl --no-progress-meter http://products/products/1 | jq "."
+{
+  "id": "PROD_0001",
+  "name": "Product Name",
+  "price": 10
+}
+```
+
+### Ingress Controller
+
+Check ingress controller deployed
+
+```shell
+$ ktl get pods -n ingress-nginx
+NAME                                        READY   STATUS    RESTARTS   AGE
+ingress-nginx-controller-776cb4b9dd-4nm2c   1/1     Running   0          18h
+```
+
+### Create ingress controllers for our services
+
+Update customers service back to ClusterIP type service. 
+
+```shell
+ktl apply -f resources/customers_clusterip_WellknownPort.yaml --force
+```
+
+Add the ingress resource for the customers service
+
+```shell
+ktl apply -f resources/customers_ingress.yaml
+```
+
+Add the ingress resource for the products service
+
+```shell
+ktl apply -f resources/products_ingress.yaml
+```
+
+### Test connectivity by using ingress controller
+
+Get ingress controller IPs address
+
+```shell
+$ ktl get pods -n ingress-controller -o wide
+NAME                                        READY   STATUS    RESTARTS   AGE   IP               NODE                                          NOMINATED NODE   READINESS GATES
+ingress-nginx-controller-776cb4b9dd-4nm2c   1/1     Running   0          21h   100.112.44.136   ip-172-20-50-30.ap-south-1.compute.internal   <none>           <none>
+```
+
+Send request to ingress controller pod IP instead of customers service or pod IP. 
+
+```shell
+$ ingressControllerPod=100.112.44.136
+$ ktl exec nginx -it -- curl --resolve test.ap-south-1.elb.amazonaws.com:80:$ingressControllerPod http://test.ap-south-1.elb.amazonaws.com/customers/1 | jq "."
+{
+  "id": "CUST_0001",
+  "name": "Customer Name",
+  "phoneNumber": "+911233243335",
+  "gender": "M"
+}
+```
+
+Now we are sending the request to the ingress controller Pod IP which is in turn sent to the customers service Pod.
+
+Check the same for products service
+
+```shell
+$ ingressControllerPod=100.112.44.136
+$ ktl exec nginx -it -- curl --resolve test.ap-south-1.elb.amazonaws.com:80:$ingressControllerPod http://test.ap-south-1.elb.amazonaws.com/products/1 | jq "."
+{
+  "id": "PROD_0001",
+  "name": "Product Name",
+  "price": 10
+}
+```
+
+## How traffic can be sent to ingress pod?
+
+A load balancer service can be added for the ingress controller. 
+Such a service is already created for ingress deployment
+
+```shell
+$ ktl get services -n ingress-nginx
+NAME                                 TYPE           CLUSTER-IP       EXTERNAL-IP                                                                PORT(S)                      AGE
+ingress-nginx-controller             LoadBalancer   100.71.89.35     a17676a4bcc284ea5a83aa3eed5bb866-1255914040.ap-south-1.elb.amazonaws.com   80:30060/TCP,443:31577/TCP   22h
+```
+That means nginx controller pods are reachable at address: http://a17676a4bcc284ea5a83aa3eed5bb866-1255914040.ap-south-1.elb.amazonaws.com
+
+Let's try to access customers and product endpoint from load balancer DNS. 
+
+```shell
+$ curl -s http://a17676a4bcc284ea5a83aa3eed5bb866-1255914040.ap-south-1.elb.amazonaws.com/customers/1 | jq "."
+{
+  "id": "CUST_0001",
+  "name": "Customer Name",
+  "phoneNumber": "+911233243335",
+  "gender": "M"
+}
+
+$ curl -s http://a17676a4bcc284ea5a83aa3eed5bb866-1255914040.ap-south-1.elb.amazonaws.com/products/1 | jq "."
+{
+  "id": "PROD_0001",
+  "name": "Product Name",
+  "price": 10
+}
 ```
 
 ---
