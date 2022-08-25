@@ -1,8 +1,8 @@
 # DevDayAug2022
 
 Notes: 
-All the following steps are tested on k8s version 1.18.x
-$ is used to present command prompt wherever required
+1. All the following steps are tested on k8s version 1.18.x
+2. $ is used to present command prompt wherever required
 
 # Pre-requisite
 
