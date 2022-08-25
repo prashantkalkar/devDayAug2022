@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: customers
+  labels:
+    app: customers
+spec:
+  containers:
+    - name: customers
+      image: amitsadafule/customer-service:1.0.0
+      ports:
+        - containerPort: 8080
