@@ -510,7 +510,7 @@ $ curl -s http://a17676a4bcc284ea5a83aa3eed5bb866-1255914040.ap-south-1.elb.amaz
 
 # Slides
 
-Refer Slides [here](TBA)
+Refer Slides [here](https://www.slideshare.net/prashantkalkar/exploring-the-flow-of-network-traffic-through-kubernetes-clusterpptx)
 
 ---
 
