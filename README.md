@@ -148,6 +148,8 @@ Delete the state buckets created using terraform as well (`terraform plan -out t
 
 ---
 
+# Session Contents
+
 # Example Application details
 
 Refer Slides [here](#slides)
@@ -220,7 +222,7 @@ customers   1/1     Running   0          5m33s
 nginx       1/1     Running   0          28s
 ```
 
-## Access the pod with the pod IP
+### Access the pod with the pod IP
 
 ```shell
 $ podIP=100.105.198.130
