@@ -511,6 +511,8 @@ $ curl -s http://a17676a4bcc284ea5a83aa3eed5bb866-1255914040.ap-south-1.elb.amaz
 # Slides
 
 Refer Slides [here](https://www.slideshare.net/prashantkalkar/exploring-the-flow-of-network-traffic-through-kubernetes-clusterpptx)
+The event details are [here](https://www.meetup.com/devday_pune/events/287898343/)
+The video recording of this event is uploaded on youtube [here](https://www.youtube.com/watch?v=i-rmeU-qSfU)
 
 ---
 
