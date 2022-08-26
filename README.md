@@ -144,7 +144,8 @@ The cluster can be destroyed as follows. Do it **at the end of the session** to 
 kops_1.18.2 delete cluster --name $CLUSTER_NAME --yes
 ```
 
-Delete the state buckets created using terraform as well (`terraform plan -out tfplan -destroy && terraform apply tfplan`)
+Delete the state buckets created using terraform as well (`terraform plan -out tfplan -destroy && terraform apply tfplan`). 
+Note: For bucket deletion you will have to add `force_destroy = true` on the bucket resource in terraform. This is required to allow terraform to delete non empty buckets. I did not add that in the code as someone might endup copied the code. 
 
 ---
 
