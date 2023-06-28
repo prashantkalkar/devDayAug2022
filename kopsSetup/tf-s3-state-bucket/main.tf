@@ -9,7 +9,7 @@ terraform {
 }
 
 provider "aws" {
-  region = "ap-south-1"
+  region = "us-east-2"
   default_tags {
     tags = {
       created_by = var.created_by_tag
@@ -20,6 +20,7 @@ provider "aws" {
 
 resource "aws_s3_bucket" "kopsStateBucket" {
   bucket = var.tf_s3_bucket_name
+  force_destroy = var.bucket_force_destroy
 }
 
 resource "aws_s3_bucket_versioning" "enabled" {
@@ -42,4 +43,9 @@ variable "tf_s3_bucket_name" {
 }
 
 variable "created_by_tag" {
+}
+
+variable "bucket_force_destroy" {
+  type = bool
+  default = false
 }

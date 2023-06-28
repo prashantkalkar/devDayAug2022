@@ -13,7 +13,7 @@ terraform {
 }
 
 provider "aws" {
-  region = "ap-south-1"
+  region = "us-east-2"
   default_tags {
     tags = {
       created_by = var.created_by_tag

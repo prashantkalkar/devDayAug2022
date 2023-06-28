@@ -71,6 +71,14 @@ Install kops binary as **kops_1.18.2** (version 1.18.2)
 Create a public-private key pair (if not already created)
 This key can be used to ssh into the instances.
 
+##### For MacOS
+
+```shell
+curl -Lo kops_1.18.2 https://github.com/kubernetes/kops/releases/download/v1.18.2/kops-darwin-amd64
+chmod +x kops_1.18.2
+sudo mv kops_1.18.2 /usr/local/bin/kops_1.18.2
+```
+
 **NOTE:** Make sure the cluster name ends with .k8s.local to use gossip based setup.
 
 ```shell
@@ -81,8 +89,8 @@ kops_1.18.2 create cluster \
     --name ${CLUSTER_NAME} \
     --cloud=aws \
     --node-count 2 \
-    --zones ap-south-1a,ap-south-1b,ap-south-1c \
-    --master-zones ap-south-1a,ap-south-1b,ap-south-1c \
+    --zones us-east-2a,us-east-2b,us-east-2c \
+    --master-zones us-east-2a,us-east-2b,us-east-2c \
     --topology private \
     --networking calico \
     --ssh-public-key=~/.ssh/id_rsa.pub \
@@ -123,14 +131,22 @@ Copy the node and bastion security group ids from AWS Console (Most likely named
 ```shell
 cd kops-k8s-node-bastion-access
 terraform init -backend-config="bucket=$TF_S3_BUCKET_NAME" -backend-config=../backend.hcl
-terraform plan -out tfplan -var="created_by_tag=prashantk" -var="node_security_group_id=sg-07fdc39cbc5ce763e" -var="bastion_security_group_id=sg-01c0dac4f86bb63ff"
+terraform plan -out tfplan -var="created_by_tag=prashantk" -var="node_security_group_id=sg-0feb31a6a945b15ed" -var="bastion_security_group_id=sg-069f7ca60a437c75f"
 terraform apply tfplan
 ```
+
+Note: The correct way to do this is to attach additional SGs through KOps configuration. 
 
 #### Deploy nginx ingress controller
 
 Install the ingress controller with following command. (Install helm if required)
 
+Dry run with debug flag
+```shell
+helm upgrade --install --dry-run --debug ingress-nginx ingress-nginx --repo https://kubernetes.github.io/ingress-nginx --namespace ingress-nginx \
+  --create-namespace --version='<4'
+```
+Install nginx ingress controller
 ```shell
 helm upgrade --install ingress-nginx ingress-nginx --repo https://kubernetes.github.io/ingress-nginx --namespace ingress-nginx \
   --create-namespace --version='<4'
@@ -226,7 +242,7 @@ nginx       1/1     Running   0          28s
 ### Access the pod with the pod IP
 
 ```shell
-$ podIP=100.105.198.130
+$ podIP=$(ktl get pods customers -o json | jq -r ".status.podIP")
 $ ktl exec nginx -- curl --no-progress-meter http://$podIP:8080/customers/1 | jq "."
 {
   "id": "CUST_0001",
@@ -274,9 +290,10 @@ nginx                        1/1     Running   0          4m48s   100.112.44.131
 Access application with any's ip address
 
 ```shell
-podIP=100.112.44.132
+podIP=100.97.47.70
 ktl exec nginx -- curl --no-progress-meter http://$podIP:8080/customers/1 | jq "."
 ```
+
 But accessing application with individual pod ip defeats the whole purpose of using deployment. 
 Pods are ephemeral and can change IPs or scale out or scale in any time. 
 
@@ -361,10 +378,14 @@ Similarly, can be map container port to the k8s node port?
 ```shell
 ktl apply -f resources/customers_nodeport_service.yaml
 ```
-Now the Port 30001 is mapped to the container pod on the k8s node and should be accessible as follows:
+Now the Port 30001 is mapped to the container pod on the k8s node and should be accessible from with in AWS as follows:
+
+Refer bastion ssh steps [here](#kops-bastion-access)
 
 ```shell
-k8sNodeIP=172.20.112.185
+ssh -A ubuntu@<bastion_dns>
+
+k8sNodeIP=172.20.54.44
 curl -s -S http://$k8sNodeIP:30001/customers/1 | jq "."
 ```
 ### Can't really use single nodeIP

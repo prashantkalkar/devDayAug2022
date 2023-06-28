@@ -1,2 +1,2 @@
-region = "ap-south-1"
+region = "us-east-2"
 encrypt = true
