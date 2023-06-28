@@ -32,6 +32,17 @@ resource "aws_security_group_rule" "allow_access_to_nodeport_portrange_from_bast
   source_security_group_id = var.bastion_security_group_id
 }
 
+# allow ping from Bastion
+resource "aws_security_group_rule" "allow_ping_from_bastion" {
+  # Ping: https://stackoverflow.com/questions/65673015/from-port-and-to-port-values-for-icmp-protocol-ingress-rule-aws-security-group-r
+  security_group_id        = var.node_security_group_id
+  from_port                = 8
+  protocol                 = "icmp"
+  to_port                  = 0
+  type                     = "ingress"
+  source_security_group_id = var.bastion_security_group_id
+}
+
 variable "created_by_tag" {
 }
 
